@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>View & Edit Packages</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  h2 { color: #333; }
+  table { border-collapse: collapse; width: 100%; max-width: 900px; margin-top: 20px; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+  th { background: #f4f4f4; }
+  input[type="text"] { padding: 6px; width: 250px; }
+  input.table-edit { width: 100%; box-sizing: border-box; }
+  #message { margin-top: 15px; font-weight: bold; white-space: pre-line; }
+  button { margin-left: 10px; padding: 8px 16px; background: #4CAF50; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+  button:hover { background: #45a049; }
+</style>
+</head>
+<body>
+<h2>View & Edit Packages</h2>
+
+<label for="sellerInput">Enter Seller ID:</label>
+<input type="text" id="sellerInput" placeholder="e.g. S123">
+<button onclick="searchSeller()">Search</button>
+
+<div id="message"></div>
+
+<table id="packagesTable" style="display:none;">
+  <thead>
+    <tr>
+      <th>PackageID</th>
+      <th>Package Name</th>
+      <th>Duration (hrs)</th>
+      <th>Price (KES)</th>
+      <th>Router Profile</th>
+      <th>Status</th>
+      <th>Created At</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+  const WORKER_URL = "https://long-rice-8526.dmaundu02.workers.dev/";
+
+  async function fetchFromWorker(action, payload) {
+    try {
+      const res = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, ...payload })
+      });
+      return await res.json();
+    } catch (err) {
+      return { success: false, message: err.message };
+    }
+  }
+
+  const table = document.getElementById('packagesTable');
+  const tbody = table.querySelector('tbody');
+  const messageDiv = document.getElementById('message');
+
+  async function searchSeller() {
+    const sellerId = document.getElementById('sellerInput').value.trim();
+    if (!sellerId) {
+      messageDiv.textContent = "⚠️ Please enter a Seller ID.";
+      table.style.display = 'none';
+      return;
+    }
+
+    messageDiv.textContent = "⏳ Checking seller...";
+    const res = await fetchFromWorker("getSellerById", { sellerId });
+    if (!res || !res.found) {
+      messageDiv.textContent = "❌ Seller not found.";
+      table.style.display = 'none';
+      return;
+    }
+
+    messageDiv.textContent = "👋 Welcome, " + res.name + " (" + res.id + ")";
+    loadPackages(sellerId);
+  }
+
+  async function loadPackages(sellerId) {
+    messageDiv.textContent += "\n⏳ Loading packages...";
+    const packages = await fetchFromWorker("getPackagesBySeller", { sellerId });
+    tbody.innerHTML = '';
+
+    if (!packages || packages.length === 0) {
+      messageDiv.textContent = "No packages found for this seller.";
+      table.style.display = 'none';
+      return;
+    }
+
+    packages.forEach(p => {
+      const tr = document.createElement('tr');
+
+      // PackageID (readonly)
+      const tdId = document.createElement('td');
+      tdId.textContent = p.PackageID;
+      tr.appendChild(tdId);
+
+      // Editable fields
+      ['PackageName','DurationHrs','PriceKES','RouterProfile','Status'].forEach(field => {
+        const td = document.createElement('td');
+        const input = document.createElement('input');
+        input.classList.add("table-edit");
+        input.value = p[field];
+        input.addEventListener('change', async function() {
+          messageDiv.textContent = "⏳ Updating...";
+          const updateRes = await fetchFromWorker("updatePackage", { packageId: p.PackageID, field, value: input.value });
+          messageDiv.textContent = updateRes.success ? "✅ Updated" : "❌ " + updateRes.message;
+        });
+        td.appendChild(input);
+        tr.appendChild(td);
+      });
+
+      // CreatedAt (readonly)
+      const tdCreated = document.createElement('td');
+      tdCreated.textContent = p.CreatedAt;
+      tr.appendChild(tdCreated);
+
+      tbody.appendChild(tr);
+    });
+
+    table.style.display = 'table';
+    messageDiv.textContent = "✅ Packages loaded for seller.";
+  }
+</script>
+</body>
+</html>
