@@ -64,10 +64,14 @@
     color: green;
   }
 
+  .table-wrapper {
+    overflow-x: auto; /* horizontal scroll */
+    margin-top: 20px;
+  }
+
   table {
     border-collapse: collapse;
     width: 100%;
-    margin-top: 20px;
   }
 
   th, td {
@@ -110,20 +114,22 @@
 
   <div id="message"></div>
 
-  <table id="packagesTable" style="display:none;">
-    <thead>
-      <tr>
-        <th>PackageID</th>
-        <th>Package Name</th>
-        <th>Duration (hrs)</th>
-        <th>Price (KES)</th>
-        <th>Router Profile</th>
-        <th>Status</th>
-        <th>Created At</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div class="table-wrapper">
+    <table id="packagesTable" style="display:none;">
+      <thead>
+        <tr>
+          <th>PackageID</th>
+          <th>Package Name</th>
+          <th>Duration (hrs)</th>
+          <th>Price (KES)</th>
+          <th>Router Profile</th>
+          <th>Status</th>
+          <th>Created At</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 </div>
 
 <script>
